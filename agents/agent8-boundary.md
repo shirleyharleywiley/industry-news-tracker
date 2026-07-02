@@ -83,6 +83,33 @@ if potential_dupes:
 
 随机抽 3-5 条，检查链接是否可访问、是否被转载页拦截。
 
+### ✅ 检查 7: 链接完整性（每条必须有可点击链接）🔴
+
+```python
+# 这是硬性检查，不通过直接标 ✗ fail
+for entry in all_entries:
+    if not entry.source_url or entry.source_url == "N/A":
+        flag(entry, "⛔ missing-link: 无任何链接")
+    elif entry.source_url in ["跨境行业渠道综合", "海关公告综合", "亚马逊卖家后台", 
+                               "跨境物流渠道", "行业渠道综合", "综合报道",
+                               "跨境电商综合", "海关/物流渠道", "电商平台"]:
+        flag(entry, "⛔ fuzzy-source: 出处为模糊描述而非可点击URL，必须替换为真实链接")
+    elif not entry.source_url.startswith("http"):
+        flag(entry, "⛔ invalid-url: 链接不是有效 URL（需以 http/https 开头）")
+
+# 检查规则
+- 禁止出现"跨境行业渠道综合""海关公告综合""亚马逊卖家后台"等无链接的模糊出处
+- 禁止出现"N/A""内部工具日志"等非链接文本作为出处
+- 出处必须是可点击的超链接（`<a href="...">来源名</a>` 或 markdown `[来源名](url)`）
+- 如果确实无法找到一手链接，也必须至少附一个二次转载/聚合页链接
+- 如果某条新闻在所有搜索引擎都无法找到任何可访问链接 → 该条目不得收入报告
+- 来源描述文字（链接文本）不能是"来源名待查""待补充"等占位符
+```
+
+**判定标准**：
+- 所有条目通过 → `✓ pass`
+- 任一条目无链接或模糊出处 → 直接 `✗ fail`，必须修正后才能进入 Agent 9
+
 ---
 
 ## 输出格式
@@ -90,6 +117,7 @@ if potential_dupes:
 ```json
 {
   "overall_status": "✓ pass / ⚠ needs-correction / ✗ fail",
+  "overall_status_rule": "检查7(链接完整性)任一不通过 → 直接 ✗ fail；其他检查不通过 → ⚠ needs-correction",
   "checks": [
     {
       "name": "date_range",
@@ -112,6 +140,14 @@ if potential_dupes:
       "details": [
         {"entry_id": "5-3", "missing": ["odm_actionable"]},
         {"entry_id": "3-1", "missing": ["background_basis"]}
+      ]
+    },
+    {
+      "name": "link_integrity",
+      "status": "✗ fail",
+      "details": [
+        {"entry_id": "6-2", "issue": "missing-link: 出处为'跨境行业渠道综合', 无URL", "fix": "替换为真实链接"},
+        {"entry_id": "6-3", "issue": "fuzzy-source: 出处为'亚马逊卖家后台', 无URL", "fix": "替换为真实链接"}
       ]
     }
   ],
