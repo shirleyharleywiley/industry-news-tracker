@@ -199,3 +199,30 @@ if onehand / total < 0.40:
 2. 召回的 Agent 完成后，重新跑 Agent 7（综合）+ Agent 8（边界守卫）+ Agent 9（终止判断）
 3. 直到 terminate 或 forced-terminate
 ```
+
+## 完成后必须执行（状态机）
+
+在返回终止判断之前，将决策摘要写入以下 JSON 文件（用 Bash + Write 工具）：
+
+```json
+{
+  "agent": "agent9-termination",
+  "run_id": "<主agent传入的run_id>",
+  "status": "completed",
+  "started_at": "<ISO8601>",
+  "completed_at": "<ISO8601>",
+  "iteration": <轮次>,
+  "decision": "terminate | continue | forced-terminate",
+  "termination_reason": "All 4 conditions satisfied",
+  "remaining_gaps": [],
+  "summary": {
+    "total_entries": 28,
+    "by_dim": {"1": 3, "2": 4, "3": 5, "4": 6, "5": 4, "6": 6},
+    "onehand_ratio": 0.68,
+    "boundary_items": 2,
+    "iterations_used": 1
+  }
+}
+```
+
+**文件路径**：`{output_dir}/.state/agents/agent9-termination.json`

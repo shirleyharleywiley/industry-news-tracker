@@ -93,3 +93,29 @@
   "notes": "5 月出口数据由海关 6 月公布，归入本月候选；本次未找到 <X> 报告"
 }
 ```
+
+## 完成后必须执行（状态机）
+
+在返回结果之前，将运行摘要写入以下 JSON 文件（用 Bash + Write 工具）：
+
+```json
+{
+  "agent": "dim1-market",
+  "run_id": "<主agent传入的run_id>",
+  "status": "completed",
+  "started_at": "<ISO8601>",
+  "completed_at": "<ISO8601>",
+  "iteration": <轮次>,
+  "candidates_count": 8,
+  "strictly_in_window": 5,
+  "boundary_items": 3,
+  "sources_used": 12,
+  "warnings": [],
+  "search_keywords_tried": ["..."],
+  "raw_output_path": "/private/tmp/claude-501/.../tasks/<id>.output"
+}
+```
+
+**文件路径**：`{output_dir}/.state/agents/dim1-market.json`（路径由主 agent 在 prompt 里传入）
+
+> 这是状态机设计的一部分（见 SKILL.md 状态机章节）。用于断点恢复和进度可见。主 agent 会监控此文件判断 phase1 是否完成。

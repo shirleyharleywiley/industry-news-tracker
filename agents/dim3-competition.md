@@ -110,3 +110,29 @@
   "notes": "奥佳华/荣泰财报实际为 4 月底披露，6 月被券商持续引用，本次未纳入（严格日期过滤）"
 }
 ```
+
+## 完成后必须执行（状态机）
+
+在返回结果之前，将运行摘要写入以下 JSON 文件（用 Bash + Write 工具）：
+
+```json
+{
+  "agent": "dim3-competition",
+  "run_id": "<主agent传入的run_id>",
+  "status": "completed",
+  "started_at": "<ISO8601>",
+  "completed_at": "<ISO8601>",
+  "iteration": <轮次>,
+  "candidates_count": 6,
+  "strictly_in_window": 4,
+  "boundary_items": 2,
+  "head_competitors_covered": ["品牌A", "品牌B"],
+  "competitors_not_found_in_range": ["品牌X"],
+  "sources_used": 8,
+  "warnings": [],
+  "search_keywords_tried": ["..."],
+  "raw_output_path": "/private/tmp/claude-501/.../tasks/<id>.output"
+}
+```
+
+**文件路径**：`{output_dir}/.state/agents/dim3-competition.json`

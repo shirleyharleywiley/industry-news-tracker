@@ -209,3 +209,27 @@
   "warnings": [...]
 }
 ```
+
+## 完成后必须执行（状态机）
+
+在返回 markdown 之前，将综合摘要写入以下 JSON 文件（用 Bash + Write 工具）：
+
+```json
+{
+  "agent": "agent7-synthesis",
+  "run_id": "<主agent传入的run_id>",
+  "status": "completed",
+  "started_at": "<ISO8601>",
+  "completed_at": "<ISO8601>",
+  "iteration": <轮次>,
+  "total_candidates": 45,
+  "deduplicated_count": 38,
+  "merged_sources": 4,
+  "by_dim": {"1": 3, "2": 4, "3": 5, "4": 6, "5": 4, "6": 6},
+  "boundary_items": 5,
+  "warnings": [],
+  "markdown_path": "{output_dir}/<domain>周报-<date_range>.md"
+}
+```
+
+**文件路径**：`{output_dir}/.state/agents/agent7-synthesis.json`

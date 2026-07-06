@@ -87,3 +87,27 @@
   "notes": "PZPE 头部按摩仪 6.22/6.25/6.26 三个测评稿疑似同源，已标 potential_duplicate=true"
 }
 ```
+
+## 完成后必须执行（状态机）
+
+在返回结果之前，将运行摘要写入以下 JSON 文件（用 Bash + Write 工具）：
+
+```json
+{
+  "agent": "dim2-trend",
+  "run_id": "<主agent传入的run_id>",
+  "status": "completed",
+  "started_at": "<ISO8601>",
+  "completed_at": "<ISO8601>",
+  "iteration": <轮次>,
+  "candidates_count": 7,
+  "strictly_in_window": 4,
+  "boundary_items": 3,
+  "sources_used": 10,
+  "warnings": [],
+  "search_keywords_tried": ["..."],
+  "raw_output_path": "/private/tmp/claude-501/.../tasks/<id>.output"
+}
+```
+
+**文件路径**：`{output_dir}/.state/agents/dim2-trend.json`

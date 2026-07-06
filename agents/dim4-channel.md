@@ -107,3 +107,28 @@
   "notes": "6.22/6.25/6.26 三个 PZPE 测评稿疑似同源带货稿，已标 potential_duplicate=true 建议综合 Agent 合并"
 }
 ```
+
+## 完成后必须执行（状态机）
+
+在返回结果之前，将运行摘要写入以下 JSON 文件（用 Bash + Write 工具）：
+
+```json
+{
+  "agent": "dim4-channel",
+  "run_id": "<主agent传入的run_id>",
+  "status": "completed",
+  "started_at": "<ISO8601>",
+  "completed_at": "<ISO8601>",
+  "iteration": <轮次>,
+  "candidates_count": 8,
+  "strictly_in_window": 5,
+  "boundary_items": 3,
+  "channels_covered": ["京东", "抖音", "TikTok"],
+  "sources_used": 9,
+  "warnings": [],
+  "search_keywords_tried": ["..."],
+  "raw_output_path": "/private/tmp/claude-501/.../tasks/<id>.output"
+}
+```
+
+**文件路径**：`{output_dir}/.state/agents/dim4-channel.json`

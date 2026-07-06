@@ -129,3 +129,28 @@
   "notes": "ABS/PC 报价小幅震荡，未达 5% 阈值，未收录"
 }
 ```
+
+## 完成后必须执行（状态机）
+
+在返回结果之前，将运行摘要写入以下 JSON 文件（用 Bash + Write 工具）：
+
+```json
+{
+  "agent": "dim5-operation",
+  "run_id": "<主agent传入的run_id>",
+  "status": "completed",
+  "started_at": "<ISO8601>",
+  "completed_at": "<ISO8601>",
+  "iteration": <轮次>,
+  "candidates_count": 7,
+  "strictly_in_window": 5,
+  "boundary_items": 2,
+  "categories_covered": ["原材料-铜", "原材料-ABS"],
+  "sources_used": 11,
+  "warnings": [],
+  "search_keywords_tried": ["..."],
+  "raw_output_path": "/private/tmp/claude-501/.../tasks/<id>.output"
+}
+```
+
+**文件路径**：`{output_dir}/.state/agents/dim5-operation.json`

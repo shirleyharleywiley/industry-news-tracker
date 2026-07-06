@@ -417,4 +417,83 @@ Phase 1 检索时若主搜索引擎工具故障，按以下顺序降级，避免
 | 终止判断 | 4 个复杂条件 | 3 个简化条件 |
 | 输出 | 多读者多版本报告 | 单一报告 + mdstyle 转 HTML |
 
-**精简原因**：新闻日报信息密度低、可信度天花板低（多为媒体报道），多轮迭代的边际收益不大；6 维度并行检索已覆盖主要工作量。
+> **精简原因**：新闻日报信息密度低、可信度天花板低（多为媒体报道），多轮迭代的边际收益不大；6 维度并行检索已覆盖主要工作量。
+
+---
+
+## 🔵 运行状态机（v2 增强）
+
+> **设计 spec**：[docs/specs/2026-07-06-state-machine-design.md](docs/specs/2026-07-06-state-machine-design.md)
+> **目的**：进度可见 + 断点恢复。解决 2026.7.6 事故中"30 分钟执行过程不可观测"的问题。
+
+### 目录结构
+
+```
+output/
+├── .state/
+│   ├── run.json                    # 主控状态文件
+│   └── agents/                     # 子 agent 结果摘要
+│       ├── dim1-market.json        # ... dim6-policy.json
+│       ├── agent7-synthesis.json   # ... agent9-termination.json
+└── <报告文件>.md / .html
+```
+
+> `.state/` 加入 `.gitignore`，不提交。
+
+### 启动检查（主 agent 第一步）
+
+主 agent 在启动后、Phase 1 之前必须先检查 `output/.state/run.json` 是否存在：
+
+| 情况 | 动作 |
+|------|------|
+| 文件不存在 | 创建新文件，`status: init` → `phase1` |
+| 文件存在，`status: completed` | 直接返回报告路径给用户，不重跑 |
+| 文件存在，其他状态 | 读取 `status` 和 `phases`，从断点继续 |
+
+### 状态枚举
+
+`init` / `phase1` / `phase2` / `phase3` / `fix` / `phase4` / `completed` / `failed`
+
+> `fix` 是 phase3 内部子状态（手动修正时），不独立占 phase 编号。
+
+### 写者职责
+
+| 文件 | 写者 | 时机 |
+|------|------|------|
+| `run.json` | 主 agent | 每次 task-notification 到达、phase 切换、修复完成时 |
+| `agents/dimX.json` | 6 个 dim 子 agent | 完成时（在 prompt 里已要求） |
+| `agents/agent7-9.json` | Agent 7/8/9 | 完成时 |
+| 报告 MD/HTML | 主 agent | Phase 4 写文件 |
+
+### 断点恢复流程
+
+```
+1. 主 agent 启动 → 检查 .state/run.json
+2. 存在 → 读取
+3. 根据 status：
+   phase1 → 读 agents/dim1-dim6.json 看哪些已完成，只补跑缺失的
+   phase2 → 看 agent7-synthesis.json，不存在则重跑 Agent 7
+   phase3 → 看 agent8/9.json，从当前检查点继续
+   phase4 / completed → 输出文件已存在或任务完成
+4. 补跑时 prompt 附带："你的上一轮结果在 agents/dim1-market.json，"
+   "本轮请在此基础上只补搜缺失日期 / 补充指定关键词"
+```
+
+### 进度查看命令
+
+```bash
+cat output/.state/run.json | python3 -c "
+import json, sys
+r = json.load(sys.stdin)
+print(f'状态: {r[\"status\"]}  |  阶段: {r[\"current_phase\"]}  |  轮次: {r[\"iteration\"]}')
+for p, info in r['phases'].items():
+    if info.get('status') == 'in_progress':
+        agents = info.get('agents', {})
+        done = sum(1 for a in agents.values() if a.get('status') == 'completed')
+        total = len(agents)
+        print(f'{p}: [{done}/{total}]')
+"
+```
+
+---
+

@@ -225,3 +225,26 @@ if not re.search(table_header_pattern, markdown):
 - ✗ fail → Agent 9 必须补一轮
 
 边界守卫本身**不做修改**，只输出检查结果。修改由主 agent 调用对应的维度 Agent 完成。
+
+## 完成后必须执行（状态机）
+
+在返回检查结果之前，将检查摘要写入以下 JSON 文件（用 Bash + Write 工具）：
+
+```json
+{
+  "agent": "agent8-boundary",
+  "run_id": "<主agent传入的run_id>",
+  "status": "completed",
+  "started_at": "<ISO8601>",
+  "completed_at": "<ISO8601>",
+  "iteration": <轮次>,
+  "overall_status": "✓ pass | ⚠ needs-correction | ✗ fail",
+  "checks_passed": 7,
+  "checks_failed": 1,
+  "failed_check_names": ["link_integrity"],
+  "fixes_count": 3,
+  "warnings": []
+}
+```
+
+**文件路径**：`{output_dir}/.state/agents/agent8-boundary.json`

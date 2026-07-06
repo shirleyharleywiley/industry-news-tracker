@@ -167,3 +167,29 @@
   "notes": "FDA 510(k) 豁免指南一手源已在 fda.gov 找到；多源链接已标注 primary_source_url"
 }
 ```
+
+## 完成后必须执行（状态机）
+
+在返回结果之前，将运行摘要写入以下 JSON 文件（用 Bash + Write 工具）：
+
+```json
+{
+  "agent": "dim6-policy",
+  "run_id": "<主agent传入的run_id>",
+  "status": "completed",
+  "started_at": "<ISO8601>",
+  "completed_at": "<ISO8601>",
+  "iteration": <轮次>,
+  "candidates_count": 7,
+  "strictly_in_window": 5,
+  "boundary_items": 2,
+  "primary_sources_identified": 5,
+  "policy_types_covered": ["FDA 510(k)", "关税", "CE 认证"],
+  "sources_used": 12,
+  "warnings": [],
+  "search_keywords_tried": ["..."],
+  "raw_output_path": "/private/tmp/claude-501/.../tasks/<id>.output"
+}
+```
+
+**文件路径**：`{output_dir}/.state/agents/dim6-policy.json`
