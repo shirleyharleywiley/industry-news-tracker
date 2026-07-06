@@ -174,6 +174,58 @@ fi
 
 **输出**：每个 agent 返回 json 数组（5-15 条候选）+ 元信息（候选数 / 搜索关键词 / 边界情况）。
 
+### 启动前 —— 创建 run.json 🔴
+
+主 agent 启动 6 个 dim agent **之前**，必须先 Write 初始 `run.json`：
+
+```json
+{
+  "run_id": "<domain_slug>-<YYYYMMDD>-<HHMMSS>",
+  "domain": "<细分领域>",
+  "date_range": "<日期范围>",
+  "reader": "<读者>",
+  "report_type": "weekly",
+  "created_at": "<ISO8601>",
+  "updated_at": "<ISO8601>",
+  "status": "phase1",
+  "current_phase": 1,
+  "iteration": 1,
+  "phases": {
+    "phase1": {"status": "in_progress", "agents": {
+      "dim1-market": {"status": "dispatched"}, "dim2-trend": {"status": "dispatched"},
+      "dim3-competition": {"status": "dispatched"}, "dim4-channel": {"status": "dispatched"},
+      "dim5-operation": {"status": "dispatched"}, "dim6-policy": {"status": "dispatched"}
+    }}
+  },
+  "output_dir": "/Users/mac/Desktop/aitask/daily-news-ee/output"
+}
+```
+
+> **绝对路径**：`{output_dir}/.state/run.json`。不是 iCloud 归档路径！
+
+### 每次收到 task-notification 时 —— 更新 run.json 🔴
+
+```
+1. task-notification 到达 → Read task output 获取子 agent 结果
+2. Read 检查 agents/dimX.json 是否存在（子 agent 应该已写入）
+3. 用 Edit/Write 更新 run.json 中对应 agent 的 status → "completed"
+4. 更新 updated_at 时间戳
+5. 检查 6 个 agent 是否全部 status=="completed" → 是 → 切 status→"phase2"
+```
+
+### 🔴 防重复启动检查
+
+在启动**第二轮** dim agent 补搜之前，必须先检查：
+
+```
+if agents/dimX.json 存在且 iteration ≥ 当前轮次:
+    跳过，不重复启动该 dim agent
+elif agents/dimX.json 存在但状态 != completed:
+    该 agent 可能卡死 → 重新启动，iteration+1
+else:
+    正常启动
+```
+
 > **关键约束（详细版见各子 agent md）**：
 > - 严格日期过滤（看发布日，不是事件日）
 > - 关键词必须带日期修饰词
@@ -198,6 +250,22 @@ fi
 4. 撰写"5 要素概述"（详见下文）
 5. 链接选取（公告类→交易所；测评类→发布时间最早；政策类→政府官网）
 6. 生成最终 markdown（**必须是表格体**）
+7. 完成后写入 `agents/agent7-synthesis.json`（已在子 agent prompt 中要求）
+
+### Agent 7 完成后 —— 更新 run.json 🔴
+
+主 agent 收到 Agent 7 task-notification 后，立即：
+
+```
+1. Read agents/agent7-synthesis.json 确认完成
+2. Edit run.json：
+   - status → "phase3"
+   - current_phase → 3
+   - phases.phase2.status → "completed"
+   - phases.phase2.agent7.status → "completed"
+   - updated_at → 当前时间
+3. 然后立刻启动 Agent 8
+```
 
 **输出格式（唯一合法格式）**：
 ```markdown
@@ -250,6 +318,36 @@ Agent 7 输出 markdown
 1. **调用 Agent 8 之前的 markdown**——必须 Read 它的 7 项检查结果，任一 fail 都不可输出
 2. **调用 Agent 9 之前的 overall_status**——必须是 ✓ pass，未通过则召回 Phase 1 补一轮
 3. **Phase 3 不可整体跳过**——主 agent 不得"判断大致没问题就输出"
+
+### Agent 8 / Agent 9 完成后 —— 更新 run.json 🔴
+
+```
+Agent 8 完成后：
+  Edit run.json → phases.phase3.agent8.status → "completed"
+  phases.phase3.agent8.result → "✓ pass" | "⚠ needs-correction" | "✗ fail"
+
+  ✗ fail → status 切 "fix"（主 agent 修正后切回 "phase3" 重跑 Agent 8/9）
+  ✓ pass → 立即启动 Agent 9
+
+Agent 9 完成后：
+  Edit run.json → phases.phase3.agent9.status → "completed"
+  phases.phase3.agent9.result → "terminate" | "continue" | "forced-terminate"
+
+  terminate / forced-terminate → status 切 "phase4", current_phase → 4
+  continue → iteration++, 按 fix_instructions 补跑，回到对应 phase
+```
+
+### Phase 4 完成后 —— 更新 run.json 🔴
+
+```
+主 agent Write 报告 MD + HTML 后：
+  Edit run.json：
+    status → "completed"
+    current_phase → 4
+    phases.phase4.status → "completed"
+    quality 字段填入最终统计
+    updated_at → 当前时间
+```
 
 ---
 
