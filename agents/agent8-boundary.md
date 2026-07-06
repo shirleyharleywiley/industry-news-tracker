@@ -110,6 +110,31 @@ for entry in all_entries:
 - 所有条目通过 → `✓ pass`
 - 任一条目无链接或模糊出处 → 直接 `✗ fail`，必须修正后才能进入 Agent 9
 
+### ✅ 检查 8: 报告格式合规 🔴【新增】
+
+```python
+# 搜索报告中是否出现章节体格式
+import re
+chapter_pattern = r'##\s+[一二三四五六七八九十]、'  # 中文章节标题
+if re.search(chapter_pattern, markdown):
+    flag("format", "⛔ wrong-format: 报告使用了章节体（## 一、），必须使用 Agent 7 规定的表格体（| 日期 | 标题 | 概述 | 链接 |）")
+    
+# 检查是否包含维度表格
+table_header_pattern = r'\|\s*日期\s*\|'
+if not re.search(table_header_pattern, markdown):
+    flag("format", "⛔ missing-table: 报告中未找到表格体，必须用表格呈现每维度条目")
+
+# 检查规则
+- 报告唯一合法格式 = Agent 7 规定的表格体
+- 禁止 `## 一、市场与规模` → `### 1.1 ...` → 段落文字 这种章节体
+- 禁止章节里嵌表格+文字说明的混合体
+- 出现中文章节标题（一、二、三...）→ 直接 ✗ fail（覆盖铁律 4）
+```
+
+**判定标准**：
+- 格式为表格体 → `✓ pass`
+- 出现章节体或混合体 → 直接 `✗ fail`
+
 ---
 
 ## 输出格式
@@ -117,7 +142,7 @@ for entry in all_entries:
 ```json
 {
   "overall_status": "✓ pass / ⚠ needs-correction / ✗ fail",
-  "overall_status_rule": "检查7(链接完整性)任一不通过 → 直接 ✗ fail；其他检查不通过 → ⚠ needs-correction",
+  "overall_status_rule": "检查7(链接完整性)或检查8(报告格式)任一不通过 → 直接 ✗ fail；其他检查不通过 → ⚠ needs-correction",
   "checks": [
     {
       "name": "date_range",
