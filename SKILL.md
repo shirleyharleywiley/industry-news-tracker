@@ -26,8 +26,25 @@ argument-hint: "<细分领域> <日期范围> [--reader 读者画像] [--output 
 [ ] 理解我的角色 = 编排者，不是写手——不自行撰写报告正文
 [ ] 理解流程 = Phase 1 → Agent 7 → Agent 8 → Agent 9 → Write → mdstyle
 [ ] 理解关闸 = Agent 9 判定 terminate 之前，绝不用 Write 输出报告文件
-[ ] 工作目录确认 = 不是 iCloud 归档路径，是真实桌面路径
+[ ] 工作目录确认 = PWD 不是 iCloud 归档路径，是真实桌面路径
 ```
+
+**工作目录检测脚本**（必须在 SKILL.md 第一项就执行）：
+
+```bash
+EXPECTED="/Users/mac/Desktop/aitask/daily-news-ee"
+CURRENT="$(pwd)"
+
+if [[ "$CURRENT" != "$EXPECTED" && ! "$CURRENT" =~ /iCloud云盘（归档）/ ]]; then
+  echo "OK: $CURRENT"
+elif [[ "$CURRENT" =~ /iCloud云盘（归档）/ ]]; then
+  echo "WRONG_DIR: $CURRENT 包含 iCloud 归档路径"
+  echo "FIX: cd /Users/mac/Desktop/aitask/daily-news-ee 后再继续"
+  exit 1
+fi
+```
+
+> **iCloud 归档路径的根因**：macOS 优化存储功能自动生成的副本目录，与真实桌面是不同的物理目录。VSCode 打开 iCloud 归档路径下的项目时，shell PWD 也是 iCloud 路径。**所有 Write 操作必须在 cd 到真实桌面后再执行。**
 
 任一项不确定 → 重读下方铁律。
 
