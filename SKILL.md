@@ -1,32 +1,77 @@
 ---
 name: industry-news-tracker
-description: "行业情报生成工具。**当用户输入形如 `/industry-news-tracker <细分领域> <日期范围>`（如 `/industry-news-tracker 蓝牙耳机 2026.6.24-7.3`），或请求生成某一细分领域（家用按摩仪、电子烟、储能、机器人、智能门锁、清洁电器等 ToC/ToB 行业）的日报/周报/月报/季报时**触发。内部使用 6 维度并行检索 + 综合 Agent + 边界守卫 + 终止判断的 4 阶段流水线，输出供 ODM 厂商老板等读者人群阅读的结构化情报简报，并自动调用 mdstyle 转 HTML。"
+description: "行业新闻、情报生成工具。当用户请求生成某一细分领域（家用按摩仪、电子烟、储能、机器人、智能门锁、清洁电器等 ToC/ToB 行业）的新闻日报/周报/月报/季报时触发。"
 user-invocable: true
 disable-model-invocation: false
 context: fork
 agent: general-purpose
 allowed-tools: WebSearch, WebFetch, mcp__MiniMax__web_search, Task, TodoWrite, Read, Write, Edit, Bash, AskUserQuestion
-argument-hint: "<细分领域> <日期范围> [--reader 读者画像] [--output 月报|周报|日报]"
+argument-hint: "<细分领域> <日期范围> "
 ---
 
 # industry-news-tracker
 
-**精简版多 agent 架构：6 维度并行检索 + 综合 + 边界守卫 + 终止判断**
+## Instructions
 
-> **使用方式**：直接输入 `/industry-news-tracker 蓝牙耳机 2026.6.24-7.3` 或 `/industry-news-tracker 储能 2026 --output 月报`。或自然语言："帮我做一份家用按摩仪 2026 年 6 月的月报，读者是 ODM 老板"。
+内部使用 6 维度并行检索 + 综合 Agent + 边界守卫 + 终止判断的 4 阶段流水线，输出供 ODM 厂商老板等读者人群阅读的结构化情报简报，并自动调用 mdstyle 转 HTML。
 
----
+调用方式
 
-## 🔴 运行前自检（主 agent 启动后第一件事）
+```bash
+/industry-news-tracker 家用按摩仪 2026.6.1-2026.6.30 
+/industry-news-tracker 储能 2026.6
+/industry-news-tracker 某细分领域 2026.Q2
+```
+
+或自然语言：
+
+> "帮我收集家用按摩仪2026 年 6 月的新闻"
+
+**适用品类示例**（不限于此）：
+- 电子制造：家用按摩仪、电子烟、储能、机器人、智能门锁、清洁电器
+- 消费品：美妆个护、母婴、家居、日化
+- 医疗健康：家用医疗器械、保健品、医药器械
+- 工业品：仪器仪表、化工原料、零部件
+- 纯软件 / SaaS：电子签、协同办公、CRM、HR SaaS、垂直 SaaS（如医疗 SaaS、法律 SaaS）
+
+**不适用场景**：宏观金融政策分析、纯学术论文综述。
+
+### step1：运行前自检（主 agent 启动后第一件事）
 
 在收到用户输入后、启动 Phase 1 之前，主 agent 必须逐条确认：
 
+1. 明确工作流程：3 阶段 × 4 类 Agent
+
 ```
-[ ] 理解最终输出格式 = Agent 7 的表格体，不是自行撰写的章节体
-[ ] 理解我的角色 = 编排者，不是写手——不自行撰写报告正文
-[ ] 理解流程 = Phase 1 → Agent 7 → Agent 8 → Agent 9 → Write → mdstyle
-[ ] 理解关闸 = Agent 9 判定 terminate 之前，绝不用 Write 输出报告文件
-[ ] 工作目录确认 = PWD 不是 iCloud 归档路径，是真实桌面路径
+用户输入（细分领域 + 日期范围）
+  ↓
+【Phase 1: 6 维度并行检索】
+  ├─ Agent 1 → 维度 1: 市场与规模       
+  ├─ Agent 2 → 维度 2: 前景与趋势       
+  ├─ Agent 3 → 维度 3: 竞争态势        
+  ├─ Agent 4 → 维度 4: 客户与渠道       
+  ├─ Agent 5 → 维度 5: 运营与利润       
+  └─ Agent 6 → 维度 6: 政策与合规      
+  ↓
+【Phase 2: 综合】
+  └─ Agent 7（综合 Agent）               
+       → 6 维度合并 + 同源去重 + 按日期排序 + 5 要素概述 + 输出 markdown
+  ↓
+【Phase 3: 边界守卫 + 终止判断】
+  ├─ Agent 8（边界守卫）                
+  │     → 检查日期范围 / 链接质量 / 维度完整性 / 5 要素完整性
+  └─ Agent 9（终止判断）                 
+        → 判断是否需要补一轮 / 输出最终报告
+  ↓
+【Phase 4: mdstyle 转 HTML】
+  ↓
+ 结束
+```
+
+2. 理解最终输出格式 = Agent 7 的表格体，不是自行撰写的章节体
+3. 理解我的角色 = 编排者，不是写手——不自行撰写报告正文
+4. 理解关闸 = Agent 9 判定 terminate 之前，绝不用 Write 输出报告文件
+5. 工作目录确认 = PWD 不是 iCloud 归档路径，是真实桌面路径
 ```
 
 **工作目录检测脚本**（必须在 SKILL.md 第一项就执行）：
@@ -46,135 +91,29 @@ fi
 
 > **iCloud 归档路径的根因**：macOS 优化存储功能自动生成的副本目录，与真实桌面是不同的物理目录。VSCode 打开 iCloud 归档路径下的项目时，shell PWD 也是 iCloud 路径。**所有 Write 操作必须在 cd 到真实桌面后再执行。**
 
-任一项不确定 → 重读下方铁律。
+### step2：创建agents
 
----
+**Agent 文件映射**：每个 agent 的完整提示词（输入参数、关键词策略、输出 json 格式、关键约束、避坑清单）都在 `agents/<file>.md` 中，具体对应关系为：
 
-## 适用场景
+  Agent 1 → agents/dim1-market.md
+  Agent 2 → agents/dim2-trend.md
+  Agent 3 → agents/dim3-competition.md
+  Agent 4 → agents/dim4-channel.md
+  Agent 5 → agents/dim5-operation.md
+  Agent 6 → agents/dim6-policy.md
+  Agent 7 → agents/agent7-synthesis.md
+  Agent 8 → agents/agent8-boundary.md
+  Agent 9 → agents/agent9-termination.md
 
-针对**任何 ToC/ToB 细分领域**（不限电子行业）生成结构化情报简报。
+**主 agent 在调用时直接 Read 该文件**，把内容作为 Task 工具的 prompt。主 agent 通过 `Task` 工具并行启动 9 个子 agent。
 
-**适用品类示例**（不限于此）：
-- 电子制造：家用按摩仪、电子烟、储能、机器人、智能门锁、清洁电器
-- 消费品：美妆个护、母婴、家居、日化
-- 医疗健康：家用医疗器械、保健品、医药器械
-- 工业品：仪器仪表、化工原料、零部件
-- 纯软件 / SaaS：电子签、协同办公、CRM、HR SaaS、垂直 SaaS（如医疗 SaaS、法律 SaaS）
+### step3：从Phase 1-Phase4 按照流程开始工作
 
-**不适用场景**：宏观金融政策分析、纯学术论文综述。
+Phase 1: 6 维度并行检索（关键约束）
 
----
+**输入**：细分领域、日期范围 统一传给 Agent 1到Agent 6 每个 agent 。
 
-## 核心架构：3 阶段 × 4 类 Agent
-
-```
-用户输入（细分领域 + 日期范围）
-  ↓
-【Phase 1: 6 维度并行检索】
-  ├─ Agent 1 → 维度 1: 市场与规模       → agents/dim1-market.md
-  ├─ Agent 2 → 维度 2: 前景与趋势       → agents/dim2-trend.md
-  ├─ Agent 3 → 维度 3: 竞争态势         → agents/dim3-competition.md
-  ├─ Agent 4 → 维度 4: 客户与渠道       → agents/dim4-channel.md
-  ├─ Agent 5 → 维度 5: 运营与利润       → agents/dim5-operation.md
-  └─ Agent 6 → 维度 6: 政策与合规       → agents/dim6-policy.md
-  ↓
-【Phase 2: 综合】
-  └─ Agent 7（综合 Agent）               → agents/agent7-synthesis.md
-       → 6 维度合并 + 同源去重 + 按日期排序 + 5 要素概述 + 输出 markdown
-  ↓
-【Phase 3: 边界守卫 + 终止判断】
-  ├─ Agent 8（边界守卫）                 → agents/agent8-boundary.md
-  │     → 检查日期范围 / 链接质量 / 维度完整性 / 5 要素完整性
-  └─ Agent 9（终止判断）                 → agents/agent9-termination.md
-        → 判断是否需要补一轮 / 输出最终报告
-  ↓
-输出 markdown 报告 → mdstyle 转 HTML
-```
-
-> **Agent 文件映射**：每个 agent 的完整提示词（输入参数、关键词策略、输出 json 格式、关键约束、避坑清单）都在 `agents/<file>.md` 中。**主 agent 在调用时直接 Read 该文件**，把内容作为 Task 工具的 prompt。
-
----
-
-## 🔴 硬性铁律（主 agent 必读，违反任一即不可输出）
-
-> **来源**：这些铁律来自两次事故——2026.7.3 蓝牙耳机报告（18 个"待补链接"+ 13 条未标窗口外）和 2026.7.6 空气炸锅报告（跳过 Agent 7/8/9 手写章节体报告，格式错误 + 大量首页链接）。**任何 agent 违反任一条，Agent 8 边界守卫直接判定 ✗ fail，必须重做。**
-
-### 铁律 1：日期判定
-1. Agent 自报的 `in_window` 标记不能直接采信——若同时标了 `boundary_reason`，**必须独立判断**。
-2. "6.24（执行中）" 是违规用法——政策原始发布日早于 6.24 的，**必须写原始发布日 + 标记 `（窗口外，但执行中）`**。
-3. 窗口外条目 ≥ 30% 时必须在文末**坦诚说明**——不要说"边界条目仅作为参考"，要明确写"维度 X 实际窗口内硬数据仅 N 条"。
-4. 不要为了表格视觉完整性偷放窗口外条目——移到独立的"边界条目"子表更诚实。
-
-### 铁律 2：链接真实性
-1. ❌ 严禁 `[来源名]（待补链接）` `[N/A]` `-` `--` 等任何占位符
-2. ❌ 严禁用纯文字描述代替链接
-3. ❌ 严禁链接仅指向网站首页（如 `https://www.zol.com.cn/`），必须指向具体文章 URL
-4. ❌ 严禁 Agent 返回"二手事件摘要"时偷放进报告
-5. ✅ 正确处理：补搜 → 找不到则**删除该条目** + 在文末"已删除事件清单"明示
-6. 任何形式的"占位符"或"首页链接"都是不可接受的。
-
-### 铁律 3：流程执行
-1. **Phase 1 数据到齐后，主 agent 的唯一合法动作是调用 Agent 7**——不得使用 Write/Edit 自行撰写报告。2026.7.6 事故就是因为主 agent 收到数据后直接手写章节体报告。
-2. **Agent 7 输出后必须立刻跑 Agent 8**——Agent 8 检查全部 8 项（日期/覆盖度/源质量/5要素/合并/链接/链接完整性/报告格式），任一 fail 不可输出。
-3. **Agent 8 pass 后必须跑 Agent 9**——3 个终止条件全部满足才可输出最终报告。
-4. **主 agent 不可跳过 Agent 7/8/9 中的任何一个**——Agent 7 提供格式保障（表格体），Agent 8 提供质量保障，Agent 9 提供完整性保障。三者缺一不可。
-
-### 铁律 4：报告格式——必须是表格体，禁止章节体 🔴【新增】
-
-> **来源**：2026.7.6 空气炸锅报告——主 agent 跳过 Agent 7，手写了章节体报告（一、本周概览 → 二、市场与规模 → ...），与 Agent 7 规定的表格体（日期 | 标题 | 概述 | 链接）完全不符。
-
-1. **报告唯一合法格式 = Agent 7 输出的表格体**：
-   ```markdown
-   ## 【问题 1：市场与规模】
-   | 日期 | 标题 | 概述 | 链接 |
-   |---|---|---|---|
-   | 7.4 | xxx | 5要素概述 | [来源](具体URL) |
-   ```
-2. ❌ 禁止章节体（一、二、三...标题下跟段落文字）
-3. ❌ 禁止混合体（章节里嵌表格 + 文字说明）
-4. ✅ 合并说明、边界说明放在文末独立段落，不嵌入维度表格内
-5. 判断方法：报告中出现"## 一、"、"## 二、" 等中文章节标题 → **直接判定格式违规**
-
-### 铁律 5：输出前关闸——不得绕过 Agent 7/8/9 直接写文件 🔴【新增】
-
-> **来源**：2026.7.6 空气炸锅报告——主 agent 在 Agent 7 尚未运行时就调用了 Write 输出报告文件。
-
-1. **在调用 Write 输出报告文件之前，必须先完成**：Agent 7（综合 markdown）→ Agent 8（边界守卫 ✓ pass）→ Agent 9（终止判断 ✓ terminate）
-2. **关闸检查清单**（主 agent 在 Write 前必须逐项自问，全部"是"才允许输出）：
-   - [ ] Agent 7 是否已运行并输出了 markdown？
-   - [ ] Agent 8 的 overall_status 是否为 ✓ pass？
-   - [ ] Agent 9 的 decision 是否为 terminate？
-   - [ ] 报告的格式是否为表格体（不是章节体）？
-   - [ ] 所有链接是否都是具体文章 URL（不是首页）？
-   - [ ] 文件是否将写入真实桌面而非 iCloud 归档路径？
-3. 任一项为"否"→ 不得 Write，必须先修正。
-
----
-
-## 6 维度定义（通用框架）
-
-| # | 维度 | 简述 | 子 agent 文件 |
-|---|------|------|--------------|
-| 1 | **市场与规模** | 市场规模、增长率、区域增量、白皮书 | [dim1-market.md](agents/dim1-market.md) |
-| 2 | **前景与趋势** | 技术路线、产品形态、需求变化信号 | [dim2-trend.md](agents/dim2-trend.md) |
-| 3 | **竞争态势** | 主要竞争对手的新品/融资/产能/IPO/签约/专利/人事 | [dim3-competition.md](agents/dim3-competition.md) |
-| 4 | **客户与渠道** | 客户群体特征变化、推广、渠道合作、营销模式 | [dim4-channel.md](agents/dim4-channel.md) |
-| 5 | **运营与利润** | 订单变动、供应链事故、上游元器件/原材料报价与交期、上市公司业绩 | [dim5-operation.md](agents/dim5-operation.md) |
-| 6 | **政策与合规** | 出口管制、关税、安全认证、UDI、贸易救济调查 | [dim6-policy.md](agents/dim6-policy.md) |
-
-> **每个维度的"收录内容"和"领域专属检索词"放在对应子 agent 的 md 中**——主 SKILL.md 不再展开。这样不同细分领域适配时，只改子 agent 文件即可。
-
----
-
-## Phase 1: 6 维度并行检索（关键约束）
-
-**调用方式**：主 agent 通过 `Task` 工具并行启动 6 个子 agent。每个 agent 的完整提示词 = `agents/dimX-<name>.md` 文件内容 + 替换 `{domain}` `{date_range}` `{reader}` 占位符。
-
-**输入**：细分领域 + 日期范围 + （可选）读者画像 — 统一传给所有 agent。
-
-**输出**：每个 agent 返回 json 数组（5-15 条候选）+ 元信息（候选数 / 搜索关键词 / 边界情况）。
-
-### 启动前 —— 创建 run.json 🔴
+启动前 —— 创建 run.json 🔴
 
 主 agent 启动 6 个 dim agent **之前**，必须先 Write 初始 `run.json`：
 
@@ -203,7 +142,9 @@ fi
 
 > **绝对路径**：`{output_dir}/.state/run.json`。不是 iCloud 归档路径！
 
-### 每次收到 task-notification 时 —— 更新 run.json 🔴
+**输出**：Agent 1到Agent 6 每个 agent 返回 json 数组（5-15 条候选）+ 元信息（候选数 / 搜索关键词 / 边界情况）。
+
+每次收到 task-notification 时 —— 更新 run.json 
 
 ```
 1. task-notification 到达 → Read task output 获取子 agent 结果
@@ -213,7 +154,7 @@ fi
 5. 检查 6 个 agent 是否全部 status=="completed" → 是 → 切 status→"phase2"
 ```
 
-### 🔴 防重复启动检查
+防重复启动检查：
 
 在启动**第二轮** dim agent 补搜之前，必须先检查：
 
@@ -235,24 +176,25 @@ else:
 
 ---
 
-## Phase 2: 综合 Agent（去重 + 排序 + 5 要素概述 + 表格体输出）🔴
+Phase 2: 综合 Agent（去重 + 排序 + 5 要素概述 + 表格体输出）
 
-> ⚠️ **主 agent 必须委托 Agent 7，禁止自行撰写报告。** 原因见铁律 3-5。
+**输入**：细分领域、日期范围、Agent 1到Agent 6 每个 agent 返回 json 数组
 
-**Agent 7** 完整提示词：`agents/agent7-synthesis.md`
+```json
+{
+  "domain": "家用按摩仪",
+  "date_range": "2026.6.1-2026.6.30",
+  "dim1_market": [...],
+  "dim2_trend": [...],
+  "dim3_competition": [...],
+  "dim4_channel": [...],
+  "dim5_operation": [...],
+  "dim6_policy": [...]
+}
+```
+**输出**：markdown文件
 
-**输入**：6 个维度 agent 的原始发现列表
-
-**职责**：
-1. 跨维度去重
-2. 同源合并（同一主题/同一数据源/同一推广目的的多源报道合并为 1 条）
-3. 按发布日期降序排列
-4. 撰写"5 要素概述"（详见下文）
-5. 链接选取（公告类→交易所；测评类→发布时间最早；政策类→政府官网）
-6. 生成最终 markdown（**必须是表格体**）
-7. 完成后写入 `agents/agent7-synthesis.json`（已在子 agent prompt 中要求）
-
-### Agent 7 完成后 —— 更新 run.json 🔴
+Agent 7 完成后 —— 更新 run.json 
 
 主 agent 收到 Agent 7 task-notification 后，立即：
 
@@ -264,155 +206,65 @@ else:
    - phases.phase2.status → "completed"
    - phases.phase2.agent7.status → "completed"
    - updated_at → 当前时间
-3. 然后立刻启动 Agent 8
-```
+3. 判断输出格式是否合法：
 
-**输出格式（唯一合法格式）**：
 ```markdown
 ## 【问题 1：市场与规模】
 | 日期 | 标题 | 概述 | 链接 |
 |---|---|---|---|
 | 7.4 | xxx | 【背景】...【数据】...【冲击】...【ODM启示】... | [来源](具体URL) |
 ```
-
-> ❌ 禁止输出：`## 一、市场与规模` → `### 1.1 ...` → 段落文字 这种章节体
-
----
-
-## Phase 3: 边界守卫 + 终止判断 🔴 **【主 agent 必须强制执行，不可跳过】**
-
-> **来源**：2026.7.3 蓝牙耳机报告事故就是因主 agent 跳过了 Agent 8/9 直接输出，导致 18 个"待补链接"和 13 条未标"窗口外"的条目流入最终报告。
-
-### 执行流程
-
-```
-Agent 7 输出 markdown
-    ↓ 【必跑】Agent 8（边界守卫）── 任一 fail ✗ 不可输出
-    ↓ 【必跑】Agent 9（终止判断）── 三个终止条件全部满足才可输出
-    ↓ 输出最终 markdown + mdstyle 转 HTML
-```
-
-### Agent 8 边界守卫 — `agents/agent8-boundary.md`
-
-检查项（共 8 项，任一 fail 必须修正）：
-- 检查 1：日期范围合规性（边界条目是否显式标注）
-- 检查 2：每维度覆盖度（≥ min_per_dim=3）
-- 检查 3：一手源占比（≥ 40%）
-- 检查 4：5 要素完整性
-- 检查 5：同源合并是否彻底
-- 检查 6：链接可访问性（抽样 3-5 条）
-- **检查 7：链接完整性 🔴**——每条必须有可点击 URL，模糊描述直接 ⛔ fail（覆盖铁律 2）；禁止首页链接（如 `https://www.zol.com.cn/`）
-- **检查 8：报告格式合规 🔴【新增】**——必须是 Agent 7 规定的表格体（`\| 日期 \| 标题 \| 概述 \| 链接 \|`），禁止章节体（`## 一、` `## 二、` 等中文章节标题）。检查方法：搜索 markdown 中是否出现 `## 一、` `## 二、` 等模式——出现则直接 ✗ fail（覆盖铁律 4）
-
-### Agent 9 终止判断 — `agents/agent9-termination.md`
-
-终止条件（必须全部满足）：
-- ① 6 个维度都有 ≥ min_per_dim 条目
-- ② 边界守卫的 fixes 已应用或显式接受
-- ③ 一手源占比 ≥ 40%
-
-未满足 → 列出优先缺口 → 召回对应 agent 补一轮（max_iterations 默认 2）。
-
-### 主 agent 在 Phase 3 的硬性动作
-
-1. **调用 Agent 8 之前的 markdown**——必须 Read 它的 7 项检查结果，任一 fail 都不可输出
-2. **调用 Agent 9 之前的 overall_status**——必须是 ✓ pass，未通过则召回 Phase 1 补一轮
-3. **Phase 3 不可整体跳过**——主 agent 不得"判断大致没问题就输出"
-
-### Agent 8 / Agent 9 完成后 —— 更新 run.json 🔴
-
-```
-Agent 8 完成后：
-  Edit run.json → phases.phase3.agent8.status → "completed"
-  phases.phase3.agent8.result → "✓ pass" | "⚠ needs-correction" | "✗ fail"
-
-  ✗ fail → status 切 "fix"（主 agent 修正后切回 "phase3" 重跑 Agent 8/9）
-  ✓ pass → 立即启动 Agent 9
-
-Agent 9 完成后：
-  Edit run.json → phases.phase3.agent9.status → "completed"
-  phases.phase3.agent9.result → "terminate" | "continue" | "forced-terminate"
-
-  terminate / forced-terminate → status 切 "phase4", current_phase → 4
-  continue → iteration++, 按 fix_instructions 补跑，回到对应 phase
-```
-
-### Phase 4 完成后 —— 更新 run.json 🔴
-
-```
-主 agent Write 报告 MD + HTML 后：
-  Edit run.json：
-    status → "completed"
-    current_phase → 4
-    phases.phase4.status → "completed"
-    quality 字段填入最终统计
-    updated_at → 当前时间
-```
+如果不合法重新执行Phase 2。
 
 ---
 
-## 5 要素概述范式
+Phase 3: 边界守卫 + 终止判断 
 
-每条新闻的概述必须包含 5 类要素：
+执行流程:
+step1： Agent 8（边界守卫）
 
-| 要素 | 说明 |
-|------|------|
-| **1. 背景/制度依据** | 一句话前置，依据 X 法 / 政策 / 行业报告 / 公告 |
-| **2. 硬数据** | 具体数字（市场规模、增速、罚款金额、覆盖率、单价、利润率） |
-| **3. 冲击分析** | 对哪类群体（ODM / 品牌方 / 消费者 / 投资方）意味着什么 |
-| **4. 可执行启示** | 具体可执行建议（备货周期、技术升级方向、客户取舍、备料窗口） |
-| **5. 政策二分**（仅政策类） | 区分"打击 X / 合规 Y"两条主线 |
+**输入**: Agent 7 输出的 markdown、细分领域、日期范围
+**输出**：边界守卫的检查结果
 
-**反例**（避免）：
-- ❌ 只引数据不说"对谁意味着什么"
-- ❌ 概述与标题几乎一样（信息密度低）
-- ❌ 缺乏具体数字（"市场规模大"/"增长显著"等模糊表达）
-- ❌ 把同源不同日期的报道当多条独立新闻
+step2： Agent 9（终止判断）
 
----
+**输入**: Agent 8的边界守卫检查结果
 
-## 同源合并规则
+当 Agent 9 决定 **terminate** 时，主 agent 接下来要做：
 
-**判定原则**：
-- 同一主题 + 同一数据源 + 同一推广目的 → 视为同一条新闻
-- 同一事件在不同日期/不同平台被多个账号转载 → 合并为 1 条
-- 带货稿（同一模板/同一主推单品密集投放）→ 合并
+```
+1. 取 Agent 9 的 final_markdown
+2. 保存到 data/<日期>/<domain>_<报告类型>_<月份>.md
+3. 简明提示剩余缺口（若有）
+```
 
-**合并写法**：
-- 标题加"（多源多日期报道）"标注
-- 日期列写合并范围（如 `6.22-6.26`）
-- 概述里注明"多源多日期 + 合并时差 + 综合各家数据"
-- 链接选最权威源（公告→交易所；测评→最早发布）
+当 Agent 9 决定 **continue** 时，主 agent 接下来要做：
 
----
+```
+1. 按 fix_instructions 召回指定的 Agent（用 Task 工具）
+2. 召回的 Agent 完成后，重新跑 Phase 2 和 Phase 3 
+3. 直到 terminate 或 forced-terminate
+```
 
-## 日期范围保障（三道防线）
+Phase 4: mdstyle 转 HTML,（使用cmd版式）
 
-### 第一道：检索阶段加日期修饰词
-每个维度 agent 检索时，关键词必须加日期限定词（如 `按摩仪 财报 2026年6月`）。
+1. 调用 mdstyle 转 HTML：
+   python ~/.claude/skills/mdstyle/scripts/converter.py <md文件> html cmd
+2. 输出md和html两个文件路径给用户
 
-### 第二道：筛选阶段看发布日期而非内容日期
-- **重点检查文章发布/抓取日期**（爬虫的 lastmod 或页面顶部时间戳），不是新闻里提到的"事件发生日期"
-- 例：奥佳华 2025 年报是 4 月 29 日发布，用户给定日期范围是 2026.6.1-6.30 → 这条**不能纳入**
-- 例：某份 6 月发布的政策文件回顾 2023 年的法规 → **可纳入**（发布日期在范围内）
 
-### 第三道：输出阶段双重标注
-- 表格"日期"列写**实际发布日期**
-- 边界条目在概述里**显式声明**原始发布日期
-- 文末"关键提示"列出哪些是边界情况
+## Performance Notes（主 agent 必读，违反任一即不可输出）
 
-**边界情况处理原则**：
+### 铁律 1：流程执行
+1. **Phase 1 数据到齐后，主 agent 的唯一合法动作是调用 Agent 7**——不得使用 Write/Edit 自行撰写报告。
+2. **Agent 7 输出后必须立刻跑 Agent 8**——Agent 8 检查全部 8 项（日期/覆盖度/源质量/5要素/合并/链接/链接完整性/报告格式），任一 fail 不可输出。
+3. **Agent 8 pass 后必须跑 Agent 9**——3 个终止条件全部满足才可输出最终报告。
+4. **主 agent 不可跳过 Agent 7/8/9 中的任何一个**——Agent 7 提供格式保障（表格体），Agent 8 提供质量保障，Agent 9 提供完整性保障。三者缺一不可。
 
-| 情况 | 处理 |
-|------|------|
-| 时间范围内发布 | 直接收录 |
-| 时间范围外发布但被范围内媒体持续引用 | 可收录，显式标注原始发布日期 |
-| 时间范围内发布的、但内容是范围外旧事件 | 看参考价值（政策类常纳入） |
-| 时间范围外发布、内容也是范围外 | **剔除** |
 
----
+### 铁律 2：不得绕过 Agent 7/8/9 直接写文件 
 
-## 检索命中不足时的强制确认（重要）
+### 铁律 3：检索命中不足时的强制确认（重要）
 
 **触发条件**：Phase 1 检索完成后，任一维度在用户给定日期范围内的搜索命中 < min_per_dim（默认 3 条）。
 
@@ -431,27 +283,6 @@ Agent 9 完成后：
 
 ---
 
-## 日期标注规范（重要）
-
-每条新闻的日期列**必须填写具体发布日期**（`YYYY-MM-DD` 或 `MM.DD`），**禁止使用模糊表述**：
-
-| ❌ 不允许 | ✅ 应改为 |
-|---------|---------|
-| 6月下旬 | 6.25 / 6.28 等具体日期（按文章抓取日） |
-| 6月底 | 同上 |
-| 6月中 | 同上 |
-| 近期 | 具体日期 |
-| 近期某段时间 | 具体日期范围或文章发布日期 |
-
-**处理原则**：
-
-- 优先使用源链接页面的发布时间戳（如 smzdm / 微信公众号 / 政府采购网公示日期）
-- 若源链接无明确日期，使用搜索结果返回的抓取日期
-- 若确实无法确认日期，写 `发布日期未确认` + 概述里注明"基于 2026-Q2 行业报告"等最弱断言来源
-
-**边界条目同样规则**：超出用户给定范围的边界条目，写**实际发布日期**（如 `6.09`），并在文末"边界条目说明"表中声明它为何被纳入（持续被引用 / 政策类 / 行业报告数据等）。
-
----
 
 ## 工具降级策略（重要）
 
@@ -481,35 +312,6 @@ Phase 1 检索时若主搜索引擎工具故障，按以下顺序降级，避免
 - 此时告知用户："工具后端异常，已取消本次报告生成。请稍后重试。"
 
 **Why**: 2026-07-01 重跑超声清洗机周报时，WebSearch 连续 8 次调用（含 'test'）全部返回 400 invalid params，单点故障导致无法验证任何日期的实际新闻命中。降级策略可避免这类情况完全卡死 skill。
-
----
-
-## 调用方式
-
-```bash
-/industry-news-tracker 家用按摩仪 2026.6.1-2026.6.30 --reader ODM方案商老板
-/industry-news-tracker 储能 2026 --output 月报
-/industry-news-tracker 某细分领域 2026.Q2 --output 季报
-```
-
-或自然语言：
-
-> "帮我做一份家用按摩仪 2026 年 6 月的月报，读者是 ODM 老板"
-
----
-
-## 输出后处理
-
-**前置条件（关闸检查）**：主 agent 在 Write 之前必须先确认：Agent 7 ✓ → Agent 8 ✓ pass → Agent 9 ✓ terminate。详见铁律 5。
-
-主 agent 在所有 agent 终止后：
-
-1. 将 markdown 保存到**真实桌面** `output/` 目录（不是 iCloud 归档路径）
-2. 调用 mdstyle 转 HTML：
-   ```bash
-   python ~/.claude/skills/mdstyle/scripts/converter.py <md文件> html cmd
-   ```
-3. 提示用户输出文件路径
 
 ---
 
