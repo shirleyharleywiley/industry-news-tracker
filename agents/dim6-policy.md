@@ -102,6 +102,60 @@
 - `按摩仪 贸易救济`、`按摩仪 反倾销`
 - `美国 510(k) 按摩仪`、`按摩仪 亚马逊 UL`
 
+## source_name 推断规则(写 JSON 前必做)
+
+从 source_url 推断 source_name,**禁止**写"来源"/"未知"/"聚合"/"综合"/"媒体"。
+
+**常用域名 → source_name 映射表**(部分):
+| 域名 | source_name |
+|------|------------|
+| so.html5.qq.com, new.qq.com | 腾讯新闻 |
+| sohu.com | 搜狐 |
+| 36kr.com | 36 氪 |
+| ithome.com | IT 之家 |
+| tmtpost.com | 钛媒体 |
+| finance.sina.com.cn | 新浪财经 |
+| paper.cnstock.com | 上海证券报 |
+| stcn.com | 证券时报 |
+| jiemodui.com | 芥末堆 |
+| 100ppi.com | 生意社 |
+| ccmn.cn, cnnn.com.cn | 长江有色 |
+| lvdingjia.com | 大沥铝材网 |
+| qcc.com | 企查查 |
+| edu.cn | 中国教育在线 |
+| baidu.com | 百家号 |
+| zol.com.cn | 中关村在线 |
+| feng.com | 凤凰网 |
+| thepaper.cn | 澎湃新闻 |
+| huxiu.com | 虎嗅 |
+| jiqizhixin.com | 机器之心 |
+| 21jingji.com | 21 经济报道 |
+| eastmoney.com | 东方财富 |
+| 10jqka.com.cn | 同花顺 |
+| jrj.com.cn | 金融界 |
+| yicai.com | 第一财经 |
+| wallstreetcn.com | 华尔街见闻 |
+| caixin.com | 财新 |
+| guancha.cn | 观察者网 |
+| tianyancha.com | 天眼查 |
+| aiqicha.baidu.com | 爱企查 |
+| bilibili.com | B 站 |
+| zhihu.com | 知乎 |
+| douyin.com | 抖音 |
+| kuaishou.com | 快手 |
+| weibo.com | 微博 |
+
+**未匹配域名** → 取核心域名前缀(去掉 .com/.cn 等后缀,取主体):
+- `gminsights.com` → `[GMI]`
+- `elicht.com` → `[elicht]`
+- `info.bjx.com.cn` → `[bjx]`
+
+**仍无法推断** → 用 URL 中 path 的关键名词(例: `/news/show-123.html` → `[news]`),但**禁止**用"来源/未知/聚合"。
+
+⚠️ 严禁直接复制搜索引擎返回的二级聚合名(如"QQ看点-养生家电内容矩阵")作为 source_name。
+
+**兜底机制**:即使按本规则推断后,主 agent 在 Phase 3 边界守卫第 8 项会用 `grep -c '\[来源\]'` 兜底,失败则 Phase 3 fail 整篇重写。所以 dim agent 只要不写"来源/未知/聚合"等明确禁用词,即可通过门禁。
+
 ## 输出格式（json 数组，每个元素一条原始发现）
 
 ```json
